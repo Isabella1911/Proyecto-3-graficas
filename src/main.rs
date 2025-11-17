@@ -8,6 +8,7 @@ mod warp;
 mod skybox;
 mod collision;
 mod input;
+mod texture;   
 
 use app::App;
 

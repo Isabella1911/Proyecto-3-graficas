@@ -9,6 +9,7 @@ use crate::math::Vec3;
 use crate::renderer::Renderer;
 use crate::ship::Ship;
 use crate::skybox;
+use crate::texture::Texture;
 use crate::warp::WarpState;
 use crate::world::SolarSystem;
 
@@ -22,6 +23,13 @@ pub struct App {
     last_frame: Instant,
     running: bool,
     warp: WarpState,
+
+    // Texturas
+    tex_sun: Texture,
+    tex_p1: Texture,
+    tex_p2: Texture,
+    tex_p3: Texture,
+    tex_moon: Texture,
 }
 
 impl App {
@@ -39,6 +47,13 @@ impl App {
         let camera = Camera::new();
         let ship = Ship::new();
 
+        // Cargar texturas (ajusta rutas según tus nombres reales)
+        let tex_sun = Texture::from_file("assets/textures/sun.jpg");
+        let tex_p1 = Texture::from_file("assets/textures/planet1.jpg");
+        let tex_p2 = Texture::from_file("assets/textures/planet2.jpg");
+        let tex_p3 = Texture::from_file("assets/textures/planet3.jpg");
+        let tex_moon = Texture::from_file("assets/textures/moon.jpg");
+
         Self {
             window,
             renderer,
@@ -49,6 +64,11 @@ impl App {
             last_frame: Instant::now(),
             running: true,
             warp: WarpState::new(),
+            tex_sun,
+            tex_p1,
+            tex_p2,
+            tex_p3,
+            tex_moon,
         }
     }
 
@@ -119,8 +139,35 @@ impl App {
     fn render(&mut self) {
         self.renderer.clear(0x000000);
 
+        // Fondo + estrellas
         skybox::draw_skybox(&mut self.renderer);
+
+        // Órbitas + círculos base + highlight
         self.system.render(&mut self.renderer, &self.camera);
+
+        // Esferas texturizadas por encima
+for i in 0..self.system.bodies.len() {
+    if let Some(((sx, sy), radius_px)) =
+        self.system.project_body(i, &self.renderer, &self.camera)
+    {
+        let tex = match i {
+            0 => &self.tex_sun,
+            1 => &self.tex_p1,
+            2 => &self.tex_p2,
+            3 => &self.tex_p3,
+            4 => &self.tex_moon,
+            _ => continue,
+        };
+
+        // Usamos el ángulo de órbita del planeta como rotación de la textura
+        let rotation = self.system.bodies[i].angle;
+
+        self.renderer
+            .draw_textured_sphere(tex, (sx, sy), radius_px, rotation);
+    }
+}
+
+        // Nave
         self.ship.render(&mut self.renderer, &self.camera);
 
         self.window

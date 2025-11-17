@@ -83,6 +83,7 @@ impl SolarSystem {
         }
     }
 
+    /// Posición global del cuerpo i
     pub fn body_position(&self, index: usize) -> Vec3 {
         let b = &self.bodies[index];
 
@@ -108,12 +109,39 @@ impl SolarSystem {
         }
     }
 
+    /// Posición en pantalla + radio del cuerpo `index`, para dibujar la esfera texturizada
+    pub fn project_body(
+        &self,
+        index: usize,
+        renderer: &Renderer,
+        camera: &Camera,
+    ) -> Option<((i32, i32), i32)> {
+        let b = &self.bodies[index];
+        let center_world = self.body_position(index);
+
+        if let Some((sx, sy)) = renderer.project_point(center_world, camera) {
+            let sample_world = center_world + Vec3::new(b.radius, 0.0, 0.0);
+            let radius_px = if let Some((sx2, sy2)) = renderer.project_point(sample_world, camera) {
+                let dx = (sx2 - sx) as f32;
+                let dy = (sy2 - sy) as f32;
+                let r = (dx * dx + dy * dy).sqrt() as i32;
+                if r < 2 { 2 } else { r }
+            } else {
+                4
+            };
+
+            Some(((sx, sy), radius_px))
+        } else {
+            None
+        }
+    }
+
+    /// Solo dibuja órbitas (los cuerpos los dibuja App con texturas)
     pub fn render(&self, renderer: &mut Renderer, camera: &Camera) {
         let orbit_color_planet = 0xFF20254F;
         let orbit_color_moon = 0xFF303B7A;
 
-        // ÓRBITAS
-        for (i, b) in self.bodies.iter().enumerate() {
+        for b in &self.bodies {
             match b.kind {
                 BodyKind::Planet | BodyKind::Moon => {
                     if b.orbit_radius <= 0.0 {
@@ -148,27 +176,6 @@ impl SolarSystem {
                     }
                 }
                 BodyKind::Star => {}
-            }
-        }
-
-        // CUERPOS
-        for i in 0..self.bodies.len() {
-            let b = &self.bodies[i];
-            let center_world = self.body_position(i);
-
-            if let Some((sx, sy)) = renderer.project_point(center_world, camera) {
-                let sample_world = center_world + Vec3::new(b.radius, 0.0, 0.0);
-                let radius_px = if let Some((sx2, sy2)) = renderer.project_point(sample_world, camera)
-                {
-                    let dx = (sx2 - sx) as f32;
-                    let dy = (sy2 - sy) as f32;
-                    let r = (dx * dx + dy * dy).sqrt() as i32;
-                    if r < 2 { 2 } else { r }
-                } else {
-                    4
-                };
-
-                renderer.draw_filled_circle((sx, sy), radius_px, b.color);
             }
         }
     }
