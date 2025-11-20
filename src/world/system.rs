@@ -28,43 +28,43 @@ impl SolarSystem {
 
         // Planeta 1 (1)
         bodies.push(Body {
-            name: "Azurea".into(),
+            name: "Mercury".into(),
             kind: BodyKind::Planet,
             radius: 3.2,
             color: 0xFF5CC8FF,
             orbit_radius: 25.0,
-            orbit_speed: 1.2,
+            orbit_speed: 0.12,
             angle: 0.0,
             parent: Some(0),
         });
 
         // Planeta 2 (2)
         bodies.push(Body {
-            name: "Rosalia".into(),
+            name: "Venus".into(),
             kind: BodyKind::Planet,
             radius: 4.5,
             color: 0xFFFF7AC8,
-            orbit_radius: 45.0,
-            orbit_speed: 0.7,
+            orbit_radius: 50.0,
+            orbit_speed: 0.32,
             angle: PI / 3.0,
             parent: Some(0),
         });
 
         // Planeta 3 (3)
         bodies.push(Body {
-            name: "Verdania".into(),
+            name: "Super Earth (Our Home)".into(),
             kind: BodyKind::Planet,
             radius: 5.4,
             color: 0xFF8DFF8D,
             orbit_radius: 70.0,
-            orbit_speed: 0.4,
+            orbit_speed: 0.54,
             angle: PI / 2.0,
             parent: Some(0),
         });
 
         // Luna de Verdania (4)
         bodies.push(Body {
-            name: "Luna Esmeralda".into(),
+            name: "Super Moon".into(),
             kind: BodyKind::Moon,
             radius: 1.8,
             color: 0xFFCFEFFF,
@@ -73,6 +73,18 @@ impl SolarSystem {
             angle: PI / 4.0,
             parent: Some(3),
         });
+
+        bodies.push(Body {
+            name: "Mars".into(),
+            kind: BodyKind::Planet,
+            radius: 6.0,
+            color: 0xFFCFEFFF,
+            orbit_radius: 90.0,
+            orbit_speed: 1.0,
+            angle: PI / 4.0,
+            parent: Some(0),
+        });
+
 
         SolarSystem { bodies }
     }

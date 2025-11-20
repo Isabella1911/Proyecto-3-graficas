@@ -3,7 +3,6 @@ mod renderer;
 mod math;
 mod world;
 mod camera;
-mod ship;
 mod warp;
 mod skybox;
 mod collision;

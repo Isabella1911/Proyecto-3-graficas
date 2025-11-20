@@ -13,9 +13,9 @@ pub struct Camera {
 impl Camera {
     pub fn new() -> Self {
         Camera {
-            position: Vec3::new(0.0, 40.0, 120.0),
-            yaw: PI,
-            pitch: -0.4,
+            position: Vec3::new(0.0, 30.0, 80.0),
+            yaw: 0.0,
+            pitch: -0.3,
             fov_y: 60.0_f32.to_radians(),
         }
     }
@@ -47,6 +47,7 @@ impl Camera {
             self.pitch -= rot_speed * dt;
         }
 
+        // Clamp del pitch
         let max_pitch = 1.3;
         if self.pitch > max_pitch {
             self.pitch = max_pitch;
@@ -55,11 +56,11 @@ impl Camera {
             self.pitch = -max_pitch;
         }
 
-        // Movimiento
         let forward = self.forward();
-        let right = forward.cross(Vec3::up()).normalized();
+        let right = Vec3::cross(forward, Vec3::up()).normalized();
         let mut velocity = Vec3::zero();
 
+        // Movimiento
         if input.move_forward {
             velocity = velocity + forward;
         }

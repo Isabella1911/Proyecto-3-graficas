@@ -3,7 +3,7 @@ use image::GenericImageView;
 pub struct Texture {
     pub width: usize,
     pub height: usize,
-    pub pixels: Vec<u32>, // ARGB: 0xAARRGGBB
+    pub pixels: Vec<u32>,
 }
 
 impl Texture {

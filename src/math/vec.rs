@@ -78,12 +78,18 @@ impl Vec3 {
         self.x * other.x + self.y * other.y + self.z * other.z
     }
 
-    pub fn cross(self, other: Vec3) -> Vec3 {
+    // --- NUEVA: versión estática para poder usar Vec3::cross(a, b) ---
+    pub fn cross(a: Vec3, b: Vec3) -> Vec3 {
         Vec3::new(
-            self.y * other.z - self.z * other.y,
-            self.z * other.x - self.x * other.z,
-            self.x * other.y - self.y * other.x,
+            a.y * b.z - a.z * b.y,
+            a.z * b.x - a.x * b.z,
+            a.x * b.y - a.y * b.x,
         )
+    }
+
+    // Opcional: método de instancia, por si querés usar forward.crossm(up)
+    pub fn crossm(self, other: Vec3) -> Vec3 {
+        Vec3::cross(self, other)
     }
 
     pub fn lerp(self, target: Vec3, t: f32) -> Vec3 {

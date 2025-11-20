@@ -15,7 +15,7 @@ pub struct Body {
     pub orbit_radius: f32,
     pub orbit_speed: f32,
     pub angle: f32,
-    pub parent: Option<usize>, // None = origen, Some(i) = orbita a cuerpo i
+    pub parent: Option<usize>, 
 }
 
 impl Body {

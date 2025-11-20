@@ -7,7 +7,6 @@ use crate::collision;
 use crate::input::InputState;
 use crate::math::Vec3;
 use crate::renderer::Renderer;
-use crate::ship::Ship;
 use crate::skybox;
 use crate::texture::Texture;
 use crate::warp::WarpState;
@@ -18,18 +17,19 @@ pub struct App {
     pub renderer: Renderer,
     system: SolarSystem,
     camera: Camera,
-    ship: Ship,
     input: InputState,
     last_frame: Instant,
     running: bool,
     warp: WarpState,
 
     // Texturas
-    tex_sun: Texture,
-    tex_p1: Texture,
-    tex_p2: Texture,
-    tex_p3: Texture,
-    tex_moon: Texture,
+    textura_sol: Texture,
+    textura_planeta1: Texture,
+    textura_planeta2: Texture,
+    textura_planeta3: Texture,
+    textura_planeta4: Texture,
+    textura_luna: Texture,
+    textura_cielo: Texture,
 }
 
 impl App {
@@ -45,30 +45,31 @@ impl App {
         let renderer = Renderer::new(width, height);
         let system = SolarSystem::new_demo();
         let camera = Camera::new();
-        let ship = Ship::new();
 
-        // Cargar texturas (ajusta rutas según tus nombres reales)
-        let tex_sun = Texture::from_file("assets/textures/sun.jpg");
-        let tex_p1 = Texture::from_file("assets/textures/planet1.jpg");
-        let tex_p2 = Texture::from_file("assets/textures/planet2.jpg");
-        let tex_p3 = Texture::from_file("assets/textures/planet3.jpg");
-        let tex_moon = Texture::from_file("assets/textures/moon.jpg");
+        let textura_sol = Texture::from_file("assets/textures/sun.jpg");
+        let textura_planeta1 = Texture::from_file("assets/textures/mercury.jpg");
+        let textura_planeta2 = Texture::from_file("assets/textures/venus.jpg");
+        let textura_planeta3 = Texture::from_file("assets/textures/earth.jpg");
+        let textura_planeta4 = Texture::from_file("assets/textures/moon.jpg");
+        let textura_luna = Texture::from_file("assets/textures/mars.jpg");
+        let textura_cielo = Texture::from_file("assets/textures/stars.jpg");
 
         Self {
             window,
             renderer,
             system,
             camera,
-            ship,
             input: InputState::new(),
             last_frame: Instant::now(),
             running: true,
             warp: WarpState::new(),
-            tex_sun,
-            tex_p1,
-            tex_p2,
-            tex_p3,
-            tex_moon,
+            textura_sol,
+            textura_planeta1,
+            textura_planeta2,
+            textura_planeta3,
+            textura_planeta4,
+            textura_luna,
+            textura_cielo,
         }
     }
 
@@ -96,7 +97,6 @@ impl App {
         }
 
         self.system.update(dt);
-        self.ship.update(dt, &self.camera);
 
         collision::resolve_collisions(&self.system, &mut self.camera);
     }
@@ -139,36 +139,40 @@ impl App {
     fn render(&mut self) {
         self.renderer.clear(0x000000);
 
-        // Fondo + estrellas
-        skybox::draw_skybox(&mut self.renderer);
+        skybox::draw_skybox(&mut self.renderer, &self.camera, &self.textura_cielo);  
 
-        // Órbitas + círculos base + highlight
         self.system.render(&mut self.renderer, &self.camera);
 
-        // Esferas texturizadas por encima
-for i in 0..self.system.bodies.len() {
-    if let Some(((sx, sy), radius_px)) =
-        self.system.project_body(i, &self.renderer, &self.camera)
-    {
-        let tex = match i {
-            0 => &self.tex_sun,
-            1 => &self.tex_p1,
-            2 => &self.tex_p2,
-            3 => &self.tex_p3,
-            4 => &self.tex_moon,
-            _ => continue,
-        };
+        let mut body_indices: Vec<(usize, f32)> = Vec::new();
+        
+        for i in 0..self.system.bodies.len() {
+            let body_pos = self.system.body_position(i);
+            let distance = (body_pos - self.camera.position).length();
+            body_indices.push((i, distance));
+        }
+        
+        body_indices.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+        
+        for (i, _) in body_indices {
+            if let Some(((sx, sy), radius_px)) =
+                self.system.project_body(i, &self.renderer, &self.camera)
+            {
+                let tex = match i {
+                    0 => &self.textura_sol,
+                    1 => &self.textura_planeta1,
+                    2 => &self.textura_planeta2,
+                    3 => &self.textura_planeta3,
+                    4 => &self.textura_planeta4,
+                    5 => &self.textura_luna,
+                    _ => continue,
+                };
+                
+                let rotation = self.system.bodies[i].angle;
 
-        // Usamos el ángulo de órbita del planeta como rotación de la textura
-        let rotation = self.system.bodies[i].angle;
-
-        self.renderer
-            .draw_textured_sphere(tex, (sx, sy), radius_px, rotation);
-    }
-}
-
-        // Nave
-        self.ship.render(&mut self.renderer, &self.camera);
+                self.renderer
+                    .draw_textured_sphere(tex, (sx, sy), radius_px, rotation);
+            }
+        }
 
         self.window
             .update_with_buffer(self.renderer.buffer(), self.renderer.width, self.renderer.height)

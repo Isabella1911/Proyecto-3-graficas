@@ -55,13 +55,14 @@ impl Renderer {
         d.triangle(p0, p1, p2, color);
     }
 
-    /// Proyección 3D: mundo -> pantalla (VERSIÓN ORIGINAL QUE YA FUNCIONABA)
+    /// Proyección 3D: mundo -> pantalla
     pub fn project_point(&self, world: Vec3, camera: &Camera) -> Option<(i32, i32)> {
         let rel = world - camera.position;
 
         let forward = camera.forward();
-        let right = forward.cross(Vec3::up()).normalized();
-        let up = right.cross(forward).normalized();
+        // ⬇⬇⬇ AQUÍ EL CAMBIO IMPORTANTE ⬇⬇⬇
+        let right = Vec3::cross(forward, Vec3::up()).normalized();
+        let up    = Vec3::cross(right, forward).normalized();
 
         let x_cam = rel.dot(right);
         let y_cam = rel.dot(up);
@@ -88,7 +89,6 @@ impl Renderer {
     }
 
     /// Dibuja un planeta como DISCO 2D texturizado.
-    /// La textura cubre todo el círculo y se rota en 2D con `rotation`.
     pub fn draw_textured_sphere(
         &mut self,
         tex: &Texture,
@@ -160,7 +160,7 @@ impl Renderer {
         }
     }
 
-    /// Blit cuadrado genérico (por si quieres sprites 2D normales, HUD, etc.).
+    /// Blit cuadrado genérico (sprites 2D, HUD, etc.).
     pub fn blit_sprite(&mut self, tex: &Texture, center: (i32, i32), size: i32) {
         if size <= 0 {
             return;
