@@ -1,0 +1,65 @@
+# =========================
+# Rust / Cargo
+# =========================
+
+# Carpeta de compilación
+/target/
+
+# Archivos de backup de Rust / editores
+**/*.rs.bk
+
+# Si algún día generas documentación local
+/target/doc/
+
+# =========================
+# Archivos del sistema operativo
+# =========================
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# =========================
+# IDEs y editores
+# =========================
+
+# VS Code
+.vscode/
+
+# IntelliJ / CLion / RustRover
+.idea/
+*.iml
+
+# Otros editores
+*.swp
+*.swo
+
+# =========================
+# Logs y temporales
+# =========================
+
+*.log
+*.tmp
+
+# =========================
+# Capturas, videos y grabaciones
+# (NO se suben al repo)
+# =========================
+
+/videos/
+/recordings/
+/captures/
+/screenshots/
+
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+
+# Capturas de frames / renders grandes
+*.bmp
+
