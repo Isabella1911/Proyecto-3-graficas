@@ -3,7 +3,7 @@
 
 ## Video de demostración
 
-**Video**: [Ver video en YouTube](AQUI_VA_EL_LINK_DEL_VIDEO)
+**Video**: [Ver video en YouTube](https://youtu.be/_i_KoSEI8W0)
 
 
 ---
