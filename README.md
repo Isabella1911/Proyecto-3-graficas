@@ -1,4 +1,36 @@
 # Proyecto-3-graficas
+# Nuevo README con implemntaciones del funcionamiento del sistema
+Se agregaron estos modulos de funcionamiento, ya que logre utilizar otra computadora ya que mi computadora esta en necesidad desesperada de su servicio :(
+video:  
+1. Primitive Assembly
+
+Se definen los cuerpos del sistema solar (sol, planetas y luna), sus radios, posiciones y órbitas.
+Las órbitas se convierten en primitivas mediante listas de vértices y segmentos de línea.
+
+2. Vertex Shading
+
+Cada punto 3D del mundo se transforma a espacio de cámara y luego a NDC usando funciones propias:
+basis(), world_to_camera(), project_to_ndc().
+Esta etapa implementa manualmente las matemáticas equivalentes a las matrices View y Projection.
+
+3. Triangle Rasterization
+
+El rasterizador está escrito desde cero, utilizando bounding box y edge functions para dibujar triángulos y líneas.
+Esto permite renderizar órbitas y cualquier primitiva 2D sin depender de APIs externas.
+
+4. Fragment Shading
+
+Cada píxel se calcula manualmente:
+
+Lectura de texturas (Texture::sample_uv)
+
+Mapeo UV sobre esferas (draw_textured_sphere)
+
+Fondo con skybox texturizado
+
+Escritura final al framebuffer
+
+## README anterior
 # Proyecto: Simulador de Sistema Solar en Rust (Software Renderer)
 
 ## Video de demostración
