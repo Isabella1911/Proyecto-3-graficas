@@ -10,7 +10,7 @@ use crate::renderer::Renderer;
 use crate::skybox;
 use crate::texture::Texture;
 use crate::warp::WarpState;
-use crate::world::SolarSystem;
+use crate::world::{BodyKind, SolarSystem};
 
 pub struct App {
     window: Window,
@@ -22,13 +22,7 @@ pub struct App {
     running: bool,
     warp: WarpState,
 
-    // Texturas
     textura_sol: Texture,
-    textura_planeta1: Texture,
-    textura_planeta2: Texture,
-    textura_planeta3: Texture,
-    textura_planeta4: Texture,
-    textura_luna: Texture,
     textura_cielo: Texture,
 }
 
@@ -47,11 +41,6 @@ impl App {
         let camera = Camera::new();
 
         let textura_sol = Texture::from_file("assets/textures/sun.jpg");
-        let textura_planeta1 = Texture::from_file("assets/textures/mercury.jpg");
-        let textura_planeta2 = Texture::from_file("assets/textures/venus.jpg");
-        let textura_planeta3 = Texture::from_file("assets/textures/earth.jpg");
-        let textura_planeta4 = Texture::from_file("assets/textures/moon.jpg");
-        let textura_luna = Texture::from_file("assets/textures/mars.jpg");
         let textura_cielo = Texture::from_file("assets/textures/stars.jpg");
 
         Self {
@@ -64,11 +53,6 @@ impl App {
             running: true,
             warp: WarpState::new(),
             textura_sol,
-            textura_planeta1,
-            textura_planeta2,
-            textura_planeta3,
-            textura_planeta4,
-            textura_luna,
             textura_cielo,
         }
     }
@@ -139,38 +123,44 @@ impl App {
     fn render(&mut self) {
         self.renderer.clear(0x000000);
 
-        skybox::draw_skybox(&mut self.renderer, &self.camera, &self.textura_cielo);  
+        skybox::draw_skybox(&mut self.renderer, &self.camera, &self.textura_cielo);
 
         self.system.render(&mut self.renderer, &self.camera);
 
         let mut body_indices: Vec<(usize, f32)> = Vec::new();
-        
+
         for i in 0..self.system.bodies.len() {
             let body_pos = self.system.body_position(i);
             let distance = (body_pos - self.camera.position).length();
             body_indices.push((i, distance));
         }
-        
+
         body_indices.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-        
+
         for (i, _) in body_indices {
             if let Some(((sx, sy), radius_px)) =
                 self.system.project_body(i, &self.renderer, &self.camera)
             {
-                let tex = match i {
-                    0 => &self.textura_sol,
-                    1 => &self.textura_planeta1,
-                    2 => &self.textura_planeta2,
-                    3 => &self.textura_planeta3,
-                    4 => &self.textura_planeta4,
-                    5 => &self.textura_luna,
-                    _ => continue,
-                };
-                
-                let rotation = self.system.bodies[i].angle;
+                let body = &self.system.bodies[i];
 
-                self.renderer
-                    .draw_textured_sphere(tex, (sx, sy), radius_px, rotation);
+                match body.kind {
+                    BodyKind::Star => {
+                        let rotation = body.angle;
+                        self.renderer
+                            .draw_textured_sphere(&self.textura_sol, (sx, sy), radius_px, rotation);
+                    }
+                    BodyKind::Planet | BodyKind::Moon => {
+                        if body.use_procedural {
+                            let light_dir = Vec3::new(body.angle.cos(), 0.7, body.angle.sin());
+                            self.renderer
+                                .draw_lit_sphere((sx, sy), radius_px, body.color, light_dir);
+                        } else {
+                            let light_dir = Vec3::new(0.4, 0.8, -1.0);
+                            self.renderer
+                                .draw_lit_sphere((sx, sy), radius_px, body.color, light_dir);
+                        }
+                    }
+                }
             }
         }
 

@@ -136,6 +136,75 @@ impl Renderer {
             }
         }
     }
+        pub fn draw_lit_sphere(
+        &mut self,
+        center: (i32, i32),
+        radius: i32,
+        base_color: u32,
+        light_dir: Vec3,
+    ) {
+        if radius <= 0 {
+            return;
+        }
+
+        let (cx, cy) = center;
+        let r = radius as f32;
+        let r2 = r * r;
+
+        let light = light_dir.normalized();
+
+        for py in -radius..=radius {
+            let sy = cy + py;
+            if sy < 0 || sy >= self.height as i32 {
+                continue;
+            }
+
+            for px in -radius..=radius {
+                let sx = cx + px;
+                if sx < 0 || sx >= self.width as i32 {
+                    continue;
+                }
+
+                let x = px as f32;
+                let y = py as f32;
+                let dist2 = x * x + y * y;
+                if dist2 > r2 {
+                    continue;
+                }
+
+                let nx = x / r;
+                let ny = y / r;
+                let nz2 = 1.0 - nx * nx - ny * ny;
+                if nz2 <= 0.0 {
+                    continue;
+                }
+                let nz = nz2.sqrt();
+
+                let normal = Vec3::new(nx, ny, nz).normalized();
+
+                let mut lambert = normal.dot(light);
+                if lambert < 0.0 {
+                    lambert = 0.0;
+                }
+
+                let k = 0.2 + 0.8 * lambert;
+
+                let a = (base_color >> 24) & 0xFF;
+                let r_c = (base_color >> 16) & 0xFF;
+                let g_c = (base_color >> 8) & 0xFF;
+                let b_c = base_color & 0xFF;
+
+                let r_sh = ((r_c as f32) * k).clamp(0.0, 255.0) as u32;
+                let g_sh = ((g_c as f32) * k).clamp(0.0, 255.0) as u32;
+                let b_sh = ((b_c as f32) * k).clamp(0.0, 255.0) as u32;
+
+                let final_color =
+                    (a << 24) | (r_sh << 16) | (g_sh << 8) | b_sh;
+
+                self.put_pixel(sx, sy, final_color);
+            }
+        }
+    }
 
     pub fn blit_sprite(&mut self, tex: &Texture, center: (i32, i32), size: i32) {
         if size <= 0 {

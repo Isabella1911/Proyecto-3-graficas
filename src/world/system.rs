@@ -15,7 +15,6 @@ impl SolarSystem {
     pub fn new_demo() -> Self {
         let mut bodies = Vec::new();
 
-        // Sol
         bodies.push(Body {
             name: "Sol".into(),
             kind: BodyKind::Star,
@@ -25,9 +24,9 @@ impl SolarSystem {
             orbit_speed: 0.0,
             angle: 0.0,
             parent: None,
+            use_procedural: false,
         });
 
-        // Planeta 1 
         bodies.push(Body {
             name: "Mercury".into(),
             kind: BodyKind::Planet,
@@ -37,21 +36,21 @@ impl SolarSystem {
             orbit_speed: 0.72,
             angle: PI / 6.0,
             parent: Some(0),
+            use_procedural: true,
         });
 
-        // Planeta 2 
         bodies.push(Body {
             name: "Venus".into(),
             kind: BodyKind::Planet,
             radius: 4.0,
-            color: 0xFFCFEFFF,
+            color: 0xFFEED5A4,
             orbit_radius: 50.0,
             orbit_speed: 0.32,
             angle: PI / 3.0,
             parent: Some(0),
+            use_procedural: true,
         });
 
-        // Planeta 3 
         bodies.push(Body {
             name: "Super Earth (Our Home)".into(),
             kind: BodyKind::Planet,
@@ -61,9 +60,9 @@ impl SolarSystem {
             orbit_speed: 0.54,
             angle: PI / 2.0,
             parent: Some(0),
+            use_procedural: true,
         });
 
-        // Luna 
         bodies.push(Body {
             name: "Moon".into(),
             kind: BodyKind::Moon,
@@ -73,9 +72,9 @@ impl SolarSystem {
             orbit_speed: 2.0,
             angle: PI / 4.0,
             parent: Some(3),
+            use_procedural: true,
         });
 
-        // Marte 
         bodies.push(Body {
             name: "Mars".into(),
             kind: BodyKind::Planet,
@@ -85,6 +84,7 @@ impl SolarSystem {
             orbit_speed: 0.28,
             angle: PI / 1.5,
             parent: Some(0),
+            use_procedural: true,
         });
 
         Self { bodies }
@@ -96,36 +96,34 @@ impl SolarSystem {
         }
     }
 
-   
     pub fn body_position(&self, index: usize) -> Vec3 {
-    let b = &self.bodies[index];
+        let b = &self.bodies[index];
 
-    match b.parent {
-        None => match b.kind {
-            BodyKind::Star => Vec3::zero(),
-            BodyKind::Planet | BodyKind::Moon => {
+        match b.parent {
+            None => match b.kind {
+                BodyKind::Star => Vec3::zero(),
+                BodyKind::Planet | BodyKind::Moon => {
+                    if b.orbit_radius == 0.0 {
+                        Vec3::zero()
+                    } else {
+                        let orbit = Orbit::new(Vec3::zero(), b.orbit_radius, 64);
+                        orbit.position_at(b.angle)
+                    }
+                }
+            },
+            Some(parent_idx) => {
+                let parent_pos = self.body_position(parent_idx);
+
                 if b.orbit_radius == 0.0 {
-                    Vec3::zero()
+                    parent_pos
                 } else {
-                    let orbit = Orbit::new(Vec3::zero(), b.orbit_radius, 64);
+                    let orbit = Orbit::new(parent_pos, b.orbit_radius, 64);
                     orbit.position_at(b.angle)
                 }
             }
-        },
-        Some(parent_idx) => {
-            let parent_pos = self.body_position(parent_idx);
-
-            if b.orbit_radius == 0.0 {
-                parent_pos
-            } else {
-                let orbit = Orbit::new(parent_pos, b.orbit_radius, 64);
-                orbit.position_at(b.angle)
-            }
         }
     }
-}
 
-    
     pub fn project_body(
         &self,
         index: usize,
@@ -152,7 +150,6 @@ impl SolarSystem {
         }
     }
 
-    
     pub fn render(&self, renderer: &mut Renderer, camera: &Camera) {
         let orbit_color_planet = 0xFF20254F;
         let orbit_color_moon = 0xFF303B7A;
@@ -164,7 +161,6 @@ impl SolarSystem {
                         continue;
                     }
 
-                    
                     let center_world = match b.parent {
                         None => Vec3::zero(),
                         Some(parent_idx) => self.body_position(parent_idx),
@@ -172,12 +168,10 @@ impl SolarSystem {
 
                     let segments = 64;
 
-                    
                     if let Some(orbit) = b.build_orbit(center_world, segments) {
                         let line_primitives = orbit.generate_line_primitives();
 
                         for (a_world, b_world) in line_primitives {
-                            
                             if let (Some(pa), Some(pb)) = (
                                 renderer.project_point(a_world, camera),
                                 renderer.project_point(b_world, camera),
