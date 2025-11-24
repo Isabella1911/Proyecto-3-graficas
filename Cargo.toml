@@ -7,3 +7,6 @@ edition = "2021"
 minifb = "0.25"
 
 image = "0.24"
+[[bin]]
+name = "dump_frame"
+path = "src/dump_frame.rs"

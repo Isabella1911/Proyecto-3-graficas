@@ -15,7 +15,7 @@ impl SolarSystem {
     pub fn new_demo() -> Self {
         let mut bodies = Vec::new();
 
-        // Star (0)
+        // Sol
         bodies.push(Body {
             name: "Sol".into(),
             kind: BodyKind::Star,
@@ -27,7 +27,7 @@ impl SolarSystem {
             parent: None,
         });
 
-        // Planeta 1 (1)
+        // Planeta 1 
         bodies.push(Body {
             name: "Mercury".into(),
             kind: BodyKind::Planet,
@@ -39,7 +39,7 @@ impl SolarSystem {
             parent: Some(0),
         });
 
-        // Planeta 2 (2)
+        // Planeta 2 
         bodies.push(Body {
             name: "Venus".into(),
             kind: BodyKind::Planet,
@@ -51,7 +51,7 @@ impl SolarSystem {
             parent: Some(0),
         });
 
-        // Planeta 3 (3)
+        // Planeta 3 
         bodies.push(Body {
             name: "Super Earth (Our Home)".into(),
             kind: BodyKind::Planet,
@@ -63,7 +63,7 @@ impl SolarSystem {
             parent: Some(0),
         });
 
-        // Luna de Super Earth (4)
+        // Luna 
         bodies.push(Body {
             name: "Moon".into(),
             kind: BodyKind::Moon,
@@ -75,7 +75,7 @@ impl SolarSystem {
             parent: Some(3),
         });
 
-        // Marte (5) – ejemplo extra
+        // Marte 
         bodies.push(Body {
             name: "Mars".into(),
             kind: BodyKind::Planet,
@@ -96,9 +96,7 @@ impl SolarSystem {
         }
     }
 
-    /// Calcula la posición 3D de un cuerpo en el sistema.
-    /// Aquí usamos `Orbit` para convertir (radio, ángulo) en una posición en el espacio,
-    /// lo cual se puede interpretar como parte de la etapa de Vertex Processing.
+   
     pub fn body_position(&self, index: usize) -> Vec3 {
     let b = &self.bodies[index];
 
@@ -127,7 +125,7 @@ impl SolarSystem {
     }
 }
 
-    /// Posición en pantalla + radio del cuerpo `index`, para dibujar la esfera texturizada
+    
     pub fn project_body(
         &self,
         index: usize,
@@ -154,10 +152,7 @@ impl SolarSystem {
         }
     }
 
-    /// Solo dibuja órbitas (los cuerpos los dibuja App con texturas)
-    /// Aquí hacemos explícitamente:
-    ///  - Primitive Assembly: Orbit -> segmentos (Vec3, Vec3)
-    ///  - Vertex Shading: proyección de cada vértice con la cámara
+    
     pub fn render(&self, renderer: &mut Renderer, camera: &Camera) {
         let orbit_color_planet = 0xFF20254F;
         let orbit_color_moon = 0xFF303B7A;
@@ -169,7 +164,7 @@ impl SolarSystem {
                         continue;
                     }
 
-                    // Centro de la órbita (el padre o el origen)
+                    
                     let center_world = match b.parent {
                         None => Vec3::zero(),
                         Some(parent_idx) => self.body_position(parent_idx),
@@ -177,12 +172,12 @@ impl SolarSystem {
 
                     let segments = 64;
 
-                    // PRIMITIVE ASSEMBLY: de parámetros → Orbit → segmentos de línea
+                    
                     if let Some(orbit) = b.build_orbit(center_world, segments) {
                         let line_primitives = orbit.generate_line_primitives();
 
                         for (a_world, b_world) in line_primitives {
-                            // VERTEX SHADING: mundo → pantalla
+                            
                             if let (Some(pa), Some(pb)) = (
                                 renderer.project_point(a_world, camera),
                                 renderer.project_point(b_world, camera),

@@ -78,7 +78,7 @@ impl Vec3 {
         self.x * other.x + self.y * other.y + self.z * other.z
     }
 
-    // --- NUEVA: versión estática para poder usar Vec3::cross(a, b) ---
+    
     pub fn cross(a: Vec3, b: Vec3) -> Vec3 {
         Vec3::new(
             a.y * b.z - a.z * b.y,
@@ -87,7 +87,7 @@ impl Vec3 {
         )
     }
 
-    // Opcional: método de instancia, por si querés usar forward.crossm(up)
+    
     pub fn crossm(self, other: Vec3) -> Vec3 {
         Vec3::cross(self, other)
     }
