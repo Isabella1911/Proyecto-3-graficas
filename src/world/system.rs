@@ -5,6 +5,7 @@ use crate::math::Vec3;
 use crate::renderer::Renderer;
 
 use super::{Body, BodyKind};
+use super::orbit::Orbit;
 
 pub struct SolarSystem {
     pub bodies: Vec<Body>,
@@ -14,7 +15,7 @@ impl SolarSystem {
     pub fn new_demo() -> Self {
         let mut bodies = Vec::new();
 
-        // Sol (0)
+        // Star (0)
         bodies.push(Body {
             name: "Sol".into(),
             kind: BodyKind::Star,
@@ -31,10 +32,10 @@ impl SolarSystem {
             name: "Mercury".into(),
             kind: BodyKind::Planet,
             radius: 3.2,
-            color: 0xFF5CC8FF,
-            orbit_radius: 25.0,
-            orbit_speed: 0.12,
-            angle: 0.0,
+            color: 0xFFCFEFFF,
+            orbit_radius: 30.0,
+            orbit_speed: 0.72,
+            angle: PI / 6.0,
             parent: Some(0),
         });
 
@@ -42,8 +43,8 @@ impl SolarSystem {
         bodies.push(Body {
             name: "Venus".into(),
             kind: BodyKind::Planet,
-            radius: 4.5,
-            color: 0xFFFF7AC8,
+            radius: 4.0,
+            color: 0xFFCFEFFF,
             orbit_radius: 50.0,
             orbit_speed: 0.32,
             angle: PI / 3.0,
@@ -62,9 +63,9 @@ impl SolarSystem {
             parent: Some(0),
         });
 
-        // Luna de Verdania (4)
+        // Luna de Super Earth (4)
         bodies.push(Body {
-            name: "Super Moon".into(),
+            name: "Moon".into(),
             kind: BodyKind::Moon,
             radius: 1.8,
             color: 0xFFCFEFFF,
@@ -74,19 +75,19 @@ impl SolarSystem {
             parent: Some(3),
         });
 
+        // Marte (5) – ejemplo extra
         bodies.push(Body {
             name: "Mars".into(),
             kind: BodyKind::Planet,
-            radius: 6.0,
-            color: 0xFFCFEFFF,
-            orbit_radius: 90.0,
-            orbit_speed: 1.0,
-            angle: PI / 4.0,
+            radius: 4.5,
+            color: 0xFFFFA07A,
+            orbit_radius: 95.0,
+            orbit_speed: 0.28,
+            angle: PI / 1.5,
             parent: Some(0),
         });
 
-
-        SolarSystem { bodies }
+        Self { bodies }
     }
 
     pub fn update(&mut self, dt: f32) {
@@ -95,31 +96,36 @@ impl SolarSystem {
         }
     }
 
-    /// Posición global del cuerpo i
+    /// Calcula la posición 3D de un cuerpo en el sistema.
+    /// Aquí usamos `Orbit` para convertir (radio, ángulo) en una posición en el espacio,
+    /// lo cual se puede interpretar como parte de la etapa de Vertex Processing.
     pub fn body_position(&self, index: usize) -> Vec3 {
-        let b = &self.bodies[index];
+    let b = &self.bodies[index];
 
-        match b.parent {
-            None => match b.kind {
-                BodyKind::Star => Vec3::zero(),
-                BodyKind::Planet | BodyKind::Moon => {
-                    let x = b.orbit_radius * b.angle.cos();
-                    let z = b.orbit_radius * b.angle.sin();
-                    Vec3::new(x, 0.0, z)
-                }
-            },
-            Some(parent_idx) => {
-                let parent_pos = self.body_position(parent_idx);
+    match b.parent {
+        None => match b.kind {
+            BodyKind::Star => Vec3::zero(),
+            BodyKind::Planet | BodyKind::Moon => {
                 if b.orbit_radius == 0.0 {
-                    parent_pos
+                    Vec3::zero()
                 } else {
-                    let x = b.orbit_radius * b.angle.cos();
-                    let z = b.orbit_radius * b.angle.sin();
-                    parent_pos + Vec3::new(x, 0.0, z)
+                    let orbit = Orbit::new(Vec3::zero(), b.orbit_radius, 64);
+                    orbit.position_at(b.angle)
                 }
+            }
+        },
+        Some(parent_idx) => {
+            let parent_pos = self.body_position(parent_idx);
+
+            if b.orbit_radius == 0.0 {
+                parent_pos
+            } else {
+                let orbit = Orbit::new(parent_pos, b.orbit_radius, 64);
+                orbit.position_at(b.angle)
             }
         }
     }
+}
 
     /// Posición en pantalla + radio del cuerpo `index`, para dibujar la esfera texturizada
     pub fn project_body(
@@ -149,6 +155,9 @@ impl SolarSystem {
     }
 
     /// Solo dibuja órbitas (los cuerpos los dibuja App con texturas)
+    /// Aquí hacemos explícitamente:
+    ///  - Primitive Assembly: Orbit -> segmentos (Vec3, Vec3)
+    ///  - Vertex Shading: proyección de cada vértice con la cámara
     pub fn render(&self, renderer: &mut Renderer, camera: &Camera) {
         let orbit_color_planet = 0xFF20254F;
         let orbit_color_moon = 0xFF303B7A;
@@ -160,30 +169,31 @@ impl SolarSystem {
                         continue;
                     }
 
+                    // Centro de la órbita (el padre o el origen)
                     let center_world = match b.parent {
                         None => Vec3::zero(),
                         Some(parent_idx) => self.body_position(parent_idx),
                     };
 
                     let segments = 64;
-                    let mut prev: Option<(i32, i32)> = None;
 
-                    for s in 0..=segments {
-                        let t = s as f32 / segments as f32 * 2.0 * PI;
-                        let x = center_world.x + b.orbit_radius * t.cos();
-                        let z = center_world.z + b.orbit_radius * t.sin();
-                        let world = Vec3::new(x, center_world.y, z);
+                    // PRIMITIVE ASSEMBLY: de parámetros → Orbit → segmentos de línea
+                    if let Some(orbit) = b.build_orbit(center_world, segments) {
+                        let line_primitives = orbit.generate_line_primitives();
 
-                        if let Some(screen) = renderer.project_point(world, camera) {
-                            if let Some(prev_pt) = prev {
+                        for (a_world, b_world) in line_primitives {
+                            // VERTEX SHADING: mundo → pantalla
+                            if let (Some(pa), Some(pb)) = (
+                                renderer.project_point(a_world, camera),
+                                renderer.project_point(b_world, camera),
+                            ) {
                                 let col = match b.kind {
                                     BodyKind::Planet => orbit_color_planet,
                                     BodyKind::Moon => orbit_color_moon,
                                     _ => orbit_color_planet,
                                 };
-                                renderer.draw_line(prev_pt, screen, col);
+                                renderer.draw_line(pa, pb, col);
                             }
-                            prev = Some(screen);
                         }
                     }
                 }

@@ -55,40 +55,20 @@ impl Renderer {
         d.triangle(p0, p1, p2, color);
     }
 
-    /// Proyección 3D: mundo -> pantalla
     pub fn project_point(&self, world: Vec3, camera: &Camera) -> Option<(i32, i32)> {
-        let rel = world - camera.position;
-
-        let forward = camera.forward();
-        // ⬇⬇⬇ AQUÍ EL CAMBIO IMPORTANTE ⬇⬇⬇
-        let right = Vec3::cross(forward, Vec3::up()).normalized();
-        let up    = Vec3::cross(right, forward).normalized();
-
-        let x_cam = rel.dot(right);
-        let y_cam = rel.dot(up);
-        let z_cam = -rel.dot(forward);
-
-        // Si está demasiado cerca o detrás, no se dibuja
-        if z_cam <= 0.1 {
-            return None;
-        }
-
-        let f = (self.height as f32 / 2.0) / (camera.fov_y * 0.5).tan();
-
-        let sx = self.width as f32 / 2.0 + x_cam * f / z_cam;
-        let sy = self.height as f32 / 2.0 - y_cam * f / z_cam;
-
-        Some((sx as i32, sy as i32))
+        let aspect = self.width as f32 / self.height as f32;
+        let (x_ndc, y_ndc, _z_cam) = camera.project_to_ndc(world, aspect)?;
+        let sx = ((x_ndc + 1.0) * 0.5 * self.width as f32).round() as i32;
+        let sy = ((1.0 - (y_ndc + 1.0) * 0.5) * self.height as f32).round() as i32;
+        Some((sx, sy))
     }
 
     pub fn world_to_screen_2d(&self, world: Vec2, camera_pos: Vec2, zoom: f32) -> (i32, i32) {
         let sx = (world.x - camera_pos.x) * zoom + (self.width as f32 / 2.0);
         let sy = (world.y - camera_pos.y) * zoom + (self.height as f32 / 2.0);
-
         (sx as i32, sy as i32)
     }
 
-    /// Dibuja un planeta como DISCO 2D texturizado.
     pub fn draw_textured_sphere(
         &mut self,
         tex: &Texture,
@@ -123,20 +103,17 @@ impl Renderer {
                 let y = py as f32;
                 let dist2 = x * x + y * y;
                 if dist2 > r2 {
-                    continue; // fuera del círculo
+                    continue;
                 }
 
-                // Coord. normalizadas [-1, 1]
                 let nx = x / r;
                 let ny = y / r;
 
-                // Rotar en 2D para que la textura "gire" sobre el planeta
                 let rx = nx * cos_a - ny * sin_a;
                 let ry = nx * sin_a + ny * cos_a;
 
-                // Mapear a [0,1]
-                let u = (rx + 1.0) * 0.5;        // 0..1
-                let v = 1.0 - (ry + 1.0) * 0.5;  // 0..1 (invertimos Y)
+                let u = (rx + 1.0) * 0.5;
+                let v = 1.0 - (ry + 1.0) * 0.5;
 
                 if u < 0.0 || u > 1.0 || v < 0.0 || v > 1.0 {
                     continue;
@@ -160,7 +137,6 @@ impl Renderer {
         }
     }
 
-    /// Blit cuadrado genérico (sprites 2D, HUD, etc.).
     pub fn blit_sprite(&mut self, tex: &Texture, center: (i32, i32), size: i32) {
         if size <= 0 {
             return;
