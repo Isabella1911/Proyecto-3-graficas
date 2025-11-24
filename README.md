@@ -1,7 +1,10 @@
 # Proyecto-3-graficas
 # Nuevo README con implemntaciones del funcionamiento del sistema
 Se agregaron estos modulos de funcionamiento, ya que logre utilizar otra computadora ya que mi computadora esta en necesidad desesperada de su servicio :(
-video:  
+
+
+#video:  https://youtu.be/wIGd_zp2eP8
+
 1. Primitive Assembly
 
 Se definen los cuerpos del sistema solar (sol, planetas y luna), sus radios, posiciones y órbitas.
