@@ -3,22 +3,48 @@
 Se agregaron estos modulos de funcionamiento, ya que logre utilizar otra computadora ya que mi computadora esta en necesidad desesperada de su servicio :(
 
 
-# video:  https://youtu.be/cgVFuq0VmAs
+# video: https://youtu.be/ao8KB_LhPU4
 
 
-Primitive Assembly
-En world/body.rs y world/system.rs defino los cuerpos del sistema solar (sol, planetas y luna) con sus radios, colores, velocidades y jerarquías, y en SolarSystem::new_demo y body_position calculo sus posiciones en el espacio 3D. Las órbitas se construyen como primitivas (listas de vértices y segmentos) en system.rs.
 
-Vertex Shading
-En camera.rs implemento las transformaciones mundo → cámara → NDC con las funciones basis, world_to_camera y project_to_ndc. El renderer las usa en Renderer::project_point para convertir cada posición 3D en coordenadas de pantalla.
+1. NUEVOS ARCHIVOS CREADOS:
+- matrix.rs - Sistema de Matrices 4x4
+Clase Matrix4 completa con todas las operaciones
+Matrices: identity(), translation(), rotation_x/y/z(), scale()
+Matrices de cámara: look_at(), perspective()
+Operaciones: multiplicación matriz×matriz, matriz×vector
 
-Triangle/Line Rasterization
-En renderer/draw2d.rs implemento rasterización manual de primitivas: line y triangle recorren el bounding box y deciden píxel por píxel qué se dibuja, escribiendo en el FrameBuffer de renderer/framebuffer.rs. Estas funciones se usan desde SolarSystem::render para dibujar órbitas y demás geometría.
+- pipeline.rs - Pipeline de Renderizado Completo
+1. Vertex Shader → Transforma vértices con matrices MVP
+2. Primitive Assembly → Ensambla triángulos desde índices
+3. Rasterization → Convierte triángulos a píxeles
+4. Fragment Shader → Calcula color final con iluminación
 
-Fragment Shading
-En texture.rs cargo las texturas a un buffer de píxeles, y en Renderer::draw_textured_sphere y skybox::draw_skybox hago el cálculo de color por píxel: para cada fragmento se obtienen coordenadas UV, se muestrea la textura y se escribe el color final en el framebuffer.
 
-  Tambien agregue shadders a los planetas y a la luna, el sol se quedo con su textura predeterminada de la NASA. 
+- mesh.rs - Sistema de Geometría 3D
+Generadores procedurales: create_sphere(), create_cube(), create_orbit_ring()
+Estructura Mesh con vértices e índices
+Soporte para normales y coordenadas UV
+
+- vec.rs - Añadido Vec4
+Vec4 para coordenadas homogéneas
+perspective_divide() para proyección
+
+2. ARCHIVOS MODIFICADOS:
+- renderer/mod.rs
+Integración del Pipeline
+Configuración de matrices View y Projection desde la cámara
+
+- world/system.rs
+Nueva función render_pipeline() que usa el pipeline 3D
+Renderiza con mallas reales en lugar de círculos 2D
+
+
+- app.rs
+Muestra FPS y modo de renderizado
+Actualiza matrices y uniforms cada frame
+
+
 ## README anterior
 # Proyecto: Simulador de Sistema Solar en Rust (Software Renderer)
 
