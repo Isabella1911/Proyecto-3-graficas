@@ -1,17 +1,22 @@
 pub mod framebuffer;
 pub mod draw2d;
+pub mod pipeline;
+pub mod mesh;
 
 use framebuffer::FrameBuffer;
 use draw2d::Draw2D;
+use pipeline::{Pipeline, ShaderType, Uniforms};
+use mesh::Mesh;
 
 use crate::camera::Camera;
-use crate::math::{Vec2, Vec3};
+use crate::math::{Vec2, Vec3, Vec4, Matrix4};
 use crate::texture::Texture;
 
 pub struct Renderer {
     pub width: usize,
     pub height: usize,
     fb: FrameBuffer,
+    pub pipeline: Pipeline,
 }
 
 impl Renderer {
@@ -20,20 +25,119 @@ impl Renderer {
             width,
             height,
             fb: FrameBuffer::new(width, height),
+            pipeline: Pipeline::new(width, height),
         }
     }
 
     pub fn clear(&mut self, color: u32) {
         self.fb.clear(color);
+        self.pipeline.clear(color);
     }
 
     pub fn buffer(&self) -> &[u32] {
-        &self.fb.pixels
+        &self.pipeline.color_buffer
     }
 
     pub fn put_pixel(&mut self, x: i32, y: i32, color: u32) {
         self.fb.put_pixel(x, y, color);
     }
+
+    
+    pub fn setup_camera(&mut self, camera: &Camera) {
+        let aspect = self.width as f32 / self.height as f32;
+        
+        
+        let forward = camera.forward();
+        let target = camera.position + forward;
+        
+        
+        self.pipeline.uniforms.view = Matrix4::look_at(
+            camera.position,
+            target,
+            Vec3::up(),
+        );
+        
+        self.pipeline.uniforms.projection = Matrix4::perspective(
+            camera.fov_y,
+            aspect,
+            0.1,
+            1000.0,
+        );
+        
+        self.pipeline.uniforms.camera_pos = camera.position;
+        self.pipeline.uniforms.update_mvp();
+    }
+
+    
+    pub fn render_mesh_pipeline(
+        &mut self,
+        mesh: &Mesh,
+        model_matrix: Matrix4,
+        shader_type: ShaderType,
+        texture: Option<&Texture>,
+    ) {
+        
+        self.pipeline.uniforms.model = model_matrix;
+        self.pipeline.uniforms.update_mvp();
+        
+        
+        self.pipeline.render_mesh(
+            &mesh.vertices,
+            &mesh.indices,
+            shader_type,
+            texture,
+        );
+    }
+
+    
+    pub fn render_solar_body(
+        &mut self,
+        position: Vec3,
+        radius: f32,
+        rotation: f32,
+        shader_type: ShaderType,
+        texture: Option<&Texture>,
+        mesh: &Mesh,
+    ) {
+        
+        let model = Matrix4::translation(position.x, position.y, position.z)
+            * Matrix4::rotation_y(rotation)
+            * Matrix4::scale(radius, radius, radius);
+        
+        self.render_mesh_pipeline(mesh, model, shader_type, texture);
+    }
+
+    /// Renderizar órbita
+    pub fn render_orbit_ring(
+        &mut self,
+        center: Vec3,
+        radius: f32,
+        mesh: &Mesh,
+    ) {
+        let model = Matrix4::translation(center.x, center.y, center.z)
+            * Matrix4::scale(1.0, 1.0, 1.0);
+        
+        self.pipeline.uniforms.model = model;
+        self.pipeline.uniforms.update_mvp();
+        
+        
+        self.pipeline.render_mesh(
+            &mesh.vertices,
+            &mesh.indices,
+            ShaderType::Basic,
+            None,
+        );
+    }
+
+    
+    pub fn present(&mut self) {
+        // Copiar del pipeline al framebuffer
+        for (i, &color) in self.pipeline.color_buffer.iter().enumerate() {
+            self.fb.pixels[i] = color;
+        }
+    }
+
+    
 
     pub fn draw_filled_circle(&mut self, center: (i32, i32), radius: i32, color: u32) {
         let mut d = Draw2D::new(&mut self.fb);
@@ -63,12 +167,7 @@ impl Renderer {
         Some((sx, sy))
     }
 
-    pub fn world_to_screen_2d(&self, world: Vec2, camera_pos: Vec2, zoom: f32) -> (i32, i32) {
-        let sx = (world.x - camera_pos.x) * zoom + (self.width as f32 / 2.0);
-        let sy = (world.y - camera_pos.y) * zoom + (self.height as f32 / 2.0);
-        (sx as i32, sy as i32)
-    }
-
+    
     pub fn draw_textured_sphere(
         &mut self,
         tex: &Texture,
@@ -76,6 +175,7 @@ impl Renderer {
         radius: i32,
         rotation: f32,
     ) {
+        
         if radius <= 0 {
             return;
         }
@@ -115,34 +215,20 @@ impl Renderer {
                 let u = (rx + 1.0) * 0.5;
                 let v = 1.0 - (ry + 1.0) * 0.5;
 
-                if u < 0.0 || u > 1.0 || v < 0.0 || v > 1.0 {
-                    continue;
-                }
-
-                let tx = (u * (tex.width as f32 - 1.0)) as usize;
-                let ty = (v * (tex.height as f32 - 1.0)) as usize;
-
-                if tx >= tex.width || ty >= tex.height {
-                    continue;
-                }
-
-                let color = tex.pixels[ty * tex.width + tx];
-                let a = (color >> 24) & 0xFF;
-                if a < 10 {
-                    continue;
-                }
-
+                let color = tex.sample_uv(u, v);
                 self.put_pixel(sx, sy, color);
             }
         }
     }
-        pub fn draw_lit_sphere(
+
+    pub fn draw_lit_sphere(
         &mut self,
         center: (i32, i32),
         radius: i32,
         base_color: u32,
         light_dir: Vec3,
     ) {
+        
         if radius <= 0 {
             return;
         }
@@ -150,7 +236,6 @@ impl Renderer {
         let (cx, cy) = center;
         let r = radius as f32;
         let r2 = r * r;
-
         let light = light_dir.normalized();
 
         for py in -radius..=radius {
@@ -181,12 +266,7 @@ impl Renderer {
                 let nz = nz2.sqrt();
 
                 let normal = Vec3::new(nx, ny, nz).normalized();
-
-                let mut lambert = normal.dot(light);
-                if lambert < 0.0 {
-                    lambert = 0.0;
-                }
-
+                let lambert = normal.dot(light).max(0.0);
                 let k = 0.2 + 0.8 * lambert;
 
                 let a = (base_color >> 24) & 0xFF;
@@ -198,56 +278,8 @@ impl Renderer {
                 let g_sh = ((g_c as f32) * k).clamp(0.0, 255.0) as u32;
                 let b_sh = ((b_c as f32) * k).clamp(0.0, 255.0) as u32;
 
-                let final_color =
-                    (a << 24) | (r_sh << 16) | (g_sh << 8) | b_sh;
-
+                let final_color = (a << 24) | (r_sh << 16) | (g_sh << 8) | b_sh;
                 self.put_pixel(sx, sy, final_color);
-            }
-        }
-    }
-
-    pub fn blit_sprite(&mut self, tex: &Texture, center: (i32, i32), size: i32) {
-        if size <= 0 {
-            return;
-        }
-
-        let half = size / 2;
-        let start_x = center.0 - half;
-        let start_y = center.1 - half;
-
-        for y in 0..size {
-            let sy = start_y + y;
-            if sy < 0 || sy >= self.height as i32 {
-                continue;
-            }
-
-            let v = y as f32 / size as f32;
-            let ty = (v * tex.height as f32) as usize;
-            if ty >= tex.height {
-                continue;
-            }
-
-            for x in 0..size {
-                let sx = start_x + x;
-                if sx < 0 || sx >= self.width as i32 {
-                    continue;
-                }
-
-                let u = x as f32 / size as f32;
-                let tx = (u * tex.width as f32) as usize;
-                if tx >= tex.width {
-                    continue;
-                }
-
-                let idx = ty * tex.width + tx;
-                let color = tex.pixels[idx];
-                let a = (color >> 24) & 0xFF;
-
-                if a < 10 {
-                    continue;
-                }
-
-                self.put_pixel(sx, sy, color);
             }
         }
     }

@@ -21,15 +21,21 @@ pub struct App {
     last_frame: Instant,
     running: bool,
     warp: WarpState,
-
+    
+    // Texturas
     textura_sol: Texture,
     textura_cielo: Texture,
+    planet_textures: Vec<Option<Texture>>,
+    
+    
+    use_pipeline: bool,
+    frame_count: u32,
 }
 
 impl App {
     pub fn new(width: usize, height: usize) -> Self {
         let window = Window::new(
-            "Sistema Solar - Rust Software Renderer",
+            "Sistema Solar - Rust Graphics Pipeline",
             width,
             height,
             WindowOptions::default(),
@@ -40,8 +46,28 @@ impl App {
         let system = SolarSystem::new_demo();
         let camera = Camera::new();
 
+        // Cargar texturas
         let textura_sol = Texture::from_file("assets/textures/sun.jpg");
         let textura_cielo = Texture::from_file("assets/textures/stars.jpg");
+        
+        
+        let mut planet_textures = Vec::new();
+        let planet_texture_files = [
+            "assets/textures/mercury.jpg",
+            "assets/textures/venus.jpg", 
+            "assets/textures/earth.jpg",
+            "assets/textures/moon.jpg",
+            "assets/textures/mars.jpg",
+        ];
+        
+        for file in &planet_texture_files {
+            
+            if std::path::Path::new(file).exists() {
+                planet_textures.push(Some(Texture::from_file(file)));
+            } else {
+                planet_textures.push(None);
+            }
+        }
 
         Self {
             window,
@@ -54,18 +80,53 @@ impl App {
             warp: WarpState::new(),
             textura_sol,
             textura_cielo,
+            planet_textures,
+            use_pipeline: true, 
+            frame_count: 0,
         }
     }
 
     pub fn run(&mut self) {
+        
+        println!("Sistema Solar");
+        println!("Controles:");
+        println!("  WASD - Mover cámara");
+        println!("  QE - Subir/Bajar");
+        println!("  Flechas - Rotar cámara");
+        println!("  1,2,3 - Teletransporte instantáneo");
+        println!("  Espacio - Teletransporte animado");
+        println!("  P - Cambiar entre pipeline/renderer antiguo");
+        println!("  ESC - Salir");
+        
+
         while self.running && self.window.is_open() && !self.window.is_key_down(Key::Escape) {
             let now = Instant::now();
             let dt = (now - self.last_frame).as_secs_f32();
             self.last_frame = now;
 
             self.input.update(&self.window);
+            
+            
+            if self.window.is_key_pressed(Key::P, minifb::KeyRepeat::No) {
+                self.use_pipeline = !self.use_pipeline;
+                println!("Modo de renderizado: {}", 
+                    if self.use_pipeline { "PIPELINE 3D" } else { "Renderer Antiguo" });
+            }
+            
             self.update(dt);
             self.render();
+            
+            self.frame_count += 1;
+            
+            
+            if self.frame_count % 60 == 0 {
+                let fps = if dt > 0.0 { 1.0 / dt } else { 0.0 };
+                println!("FPS: {:.1} | Modo: {} | Frame: {}", 
+                    fps, 
+                    if self.use_pipeline { "Pipeline" } else { "Legacy" },
+                    self.frame_count
+                );
+            }
 
             std::thread::sleep(std::time::Duration::from_millis(5));
         }
@@ -81,6 +142,9 @@ impl App {
         }
 
         self.system.update(dt);
+        
+        
+        self.renderer.pipeline.uniforms.time += dt;
 
         collision::resolve_collisions(&self.system, &mut self.camera);
     }
@@ -123,18 +187,37 @@ impl App {
     fn render(&mut self) {
         self.renderer.clear(0x000000);
 
+        
         skybox::draw_skybox(&mut self.renderer, &self.camera, &self.textura_cielo);
 
+        if self.use_pipeline {
+            
+            self.system.render_pipeline(
+                &mut self.renderer,
+                &self.camera,
+                &self.textura_sol,
+                &self.planet_textures,
+            );
+        } else {
+            
+            self.render_legacy();
+        }
+
+        self.window
+            .update_with_buffer(self.renderer.buffer(), self.renderer.width, self.renderer.height)
+            .expect("Error al actualizar la ventana");
+    }
+    
+    fn render_legacy(&mut self) {
+        
         self.system.render(&mut self.renderer, &self.camera);
 
         let mut body_indices: Vec<(usize, f32)> = Vec::new();
-
         for i in 0..self.system.bodies.len() {
             let body_pos = self.system.body_position(i);
             let distance = (body_pos - self.camera.position).length();
             body_indices.push((i, distance));
         }
-
         body_indices.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
         for (i, _) in body_indices {
@@ -146,26 +229,24 @@ impl App {
                 match body.kind {
                     BodyKind::Star => {
                         let rotation = body.angle;
-                        self.renderer
-                            .draw_textured_sphere(&self.textura_sol, (sx, sy), radius_px, rotation);
+                        self.renderer.draw_textured_sphere(
+                            &self.textura_sol, 
+                            (sx, sy), 
+                            radius_px, 
+                            rotation
+                        );
                     }
                     BodyKind::Planet | BodyKind::Moon => {
-                        if body.use_procedural {
-                            let light_dir = Vec3::new(body.angle.cos(), 0.7, body.angle.sin());
-                            self.renderer
-                                .draw_lit_sphere((sx, sy), radius_px, body.color, light_dir);
-                        } else {
-                            let light_dir = Vec3::new(0.4, 0.8, -1.0);
-                            self.renderer
-                                .draw_lit_sphere((sx, sy), radius_px, body.color, light_dir);
-                        }
+                        let light_dir = Vec3::new(0.4, 0.8, -1.0);
+                        self.renderer.draw_lit_sphere(
+                            (sx, sy), 
+                            radius_px, 
+                            body.color, 
+                            light_dir
+                        );
                     }
                 }
             }
         }
-
-        self.window
-            .update_with_buffer(self.renderer.buffer(), self.renderer.width, self.renderer.height)
-            .expect("Error al actualizar la ventana");
     }
 }

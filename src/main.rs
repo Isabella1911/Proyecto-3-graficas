@@ -10,9 +10,13 @@ mod collision;
 mod warp;
 
 fn main() {
-    let width: usize = 960;
-    let height: usize = 540;
+    let width: usize = 1280;  
+    let height: usize = 720;
 
+    println!("Iniciando Sistema Solar con Graphics Pipeline...");
+    
     let mut app = app::App::new(width, height);
     app.run();
+    
+    println!("Aplicación finalizada.");
 }
