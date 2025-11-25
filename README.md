@@ -7,42 +7,42 @@ Se agregaron estos modulos de funcionamiento, ya que logre utilizar otra computa
 
 
 
-1. NUEVOS ARCHIVOS CREADOS:
-- matrix.rs - Sistema de Matrices 4x4
-Clase Matrix4 completa con todas las operaciones
-Matrices: identity(), translation(), rotation_x/y/z(), scale()
-Matrices de cámara: look_at(), perspective()
-Operaciones: multiplicación matriz×matriz, matriz×vector
+## 1. NUEVOS ARCHIVOS CREADOS:
+# - matrix.rs - Sistema de Matrices 4x4
+- Clase Matrix4 completa con todas las operaciones
+- Matrices: identity, translation, rotation, scale
+- Matrices de cámara: look_at, perspective
+- Operaciones: multiplicación matriz×matriz, matriz×vector
 
-- pipeline.rs - Pipeline de Renderizado Completo
+# - pipeline.rs - Pipeline de Renderizado Completo
 1. Vertex Shader → Transforma vértices con matrices MVP
 2. Primitive Assembly → Ensambla triángulos desde índices
 3. Rasterization → Convierte triángulos a píxeles
 4. Fragment Shader → Calcula color final con iluminación
 
 
-- mesh.rs - Sistema de Geometría 3D
-Generadores procedurales: create_sphere(), create_cube(), create_orbit_ring()
-Estructura Mesh con vértices e índices
-Soporte para normales y coordenadas UV
+# - mesh.rs - Sistema de Geometría 3D
+- Generadores procedurales: create_sphere, create_cube, create_orbit_ring
+- Estructura Mesh con vértices e índices
+- Soporte para normales y coordenadas UV
 
-- vec.rs - Añadido Vec4
-Vec4 para coordenadas homogéneas
-perspective_divide() para proyección
+# - vec.rs - Añadido Vec4
+- Vec4 para coordenadas homogéneas
+- perspective_divide para proyección
 
-2. ARCHIVOS MODIFICADOS:
-- renderer/mod.rs
-Integración del Pipeline
-Configuración de matrices View y Projection desde la cámara
+## 2. ARCHIVOS MODIFICADOS:
+# - renderer/mod.rs
+- Integración del Pipeline
+- Configuración de matrices View y Projection desde la cámara
 
-- world/system.rs
-Nueva función render_pipeline() que usa el pipeline 3D
-Renderiza con mallas reales en lugar de círculos 2D
+# - world/system.rs
+- Nueva función render_pipeline que usa el pipeline 3D
+- Renderiza con mallas reales en lugar de círculos 2D
 
 
-- app.rs
-Muestra FPS y modo de renderizado
-Actualiza matrices y uniforms cada frame
+# - app.rs
+- Muestra FPS y modo de renderizado
+- Actualiza matrices y uniforms cada frame
 
 
 ## README anterior
